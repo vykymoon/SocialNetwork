@@ -14,18 +14,18 @@ export default function NavBar() {
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
       </Link>
-      <Link href=".." asChild>
+      <Link href="/main/chat" asChild>
         <TouchableOpacity style={styles.navButton}>
           <Ionicons name="chatbubble-outline" size={28} color="#e7c022" />
           <Text style={styles.navLabel}>Chat</Text>
         </TouchableOpacity>
       </Link>
-      <Link href=".." asChild>
+      <Link href="/main/create" asChild>
         <TouchableOpacity style={styles.plusButton}>
           <Feather name="plus-circle" size={40} color="#e7c022" />
         </TouchableOpacity>
       </Link>
-      <Link href="../main/reels" asChild>
+      <Link href="/main/reels" asChild>
         <TouchableOpacity style={styles.navButton}>
           <Feather name="film" size={28} color="#e7c022" />
           <Text style={styles.navLabel}>Reels</Text>
