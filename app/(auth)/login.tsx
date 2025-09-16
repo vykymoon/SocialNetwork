@@ -1,15 +1,43 @@
 import { Link, useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { supabase } from '../../lib/supabase'
 
 export default function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
     const router = useRouter()
 
-    // Navegación simulada: sin validaciones
-    const handleLogin = () => {
-        router.replace('/main')
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            setError("Por favor ingresa email y contraseña")
+            return
+        }
+
+        setLoading(true)
+        setError('')
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        })
+
+        setLoading(false)
+
+        if (error) {
+            if (error.message.includes("Invalid login credentials")) {
+                setError("Usuario o contraseña incorrectos")
+            } else {
+                setError("Ocurrió un error: " + error.message)
+            }
+        } else if (data?.user) {
+            // Solo navega si hay usuario válido
+            router.replace('/main')
+        } else {
+            setError("No se pudo iniciar sesión. Intenta de nuevo.")
+        }
     }
 
     return (
@@ -49,9 +77,18 @@ export default function Login() {
             </TouchableOpacity>
 
             {/* Botón Login */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={styles.loginButtonText}>Log In</Text>
+            <TouchableOpacity
+                style={[styles.loginButton, loading && { opacity: 0.6 }]}
+                onPress={handleLogin}
+                disabled={loading}
+            >
+                <Text style={styles.loginButtonText}>
+                    {loading ? "Cargando..." : "Log In"}
+                </Text>
             </TouchableOpacity>
+
+            {/* Error */}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
@@ -134,6 +171,11 @@ const styles = StyleSheet.create({
         color: "black",
         fontSize: 18,
         fontWeight: "bold",
+    },
+    error: {
+        color: 'red',
+        marginTop: 12,
+        textAlign: 'center',
     },
     dividerContainer: {
         flexDirection: "row",
