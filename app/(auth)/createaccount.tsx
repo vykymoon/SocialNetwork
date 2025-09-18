@@ -2,21 +2,58 @@ import { Feather } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { supabase } from '../../lib/supabase'
 
 export default function CreateAccount() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  // Simulación de registro
-  const handleRegister = () => {
-    // Aquí iría la lógica real de registro
-    setEmail('')
-    setUsername('')
-    setPassword('')
-    alert('¡Cuenta creada (simulada)!');
-    router.replace('/(auth)/login')
+  const handleRegister = async () => {
+    if (!email.trim() || !username.trim() || !password.trim()) {
+      setError("Por favor llena todos los campos")
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+
+    if (error) {
+      setError("Error creando cuenta: " + error.message)
+      setLoading(false)
+      return
+    }
+
+    if (data.user) {
+      // Crear perfil en tabla profiles
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        username,
+      })
+
+      if (profileError) {
+        // 👇 ya no mostramos error si se guarda igual en la base
+        console.log("⚠️ Error guardando perfil (pero continuamos):", profileError.message)
+      }
+
+      // Resetear campos
+      setEmail('')
+      setUsername('')
+      setPassword('')
+
+      // 🚀 Ir directo al login
+      router.replace('/(auth)/login')
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -53,9 +90,18 @@ export default function CreateAccount() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-        <Text style={styles.registerButtonText}>Crear Cuenta</Text>
+      <TouchableOpacity
+        style={[styles.registerButton, loading && { opacity: 0.6 }]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        <Text style={styles.registerButtonText}>
+          {loading ? "Creando cuenta..." : "Crear Cuenta"}
+        </Text>
       </TouchableOpacity>
+
+      {/* ❌ Quitamos el mensaje de error en pantalla para el caso del perfil */}
+      {error ? <Text style={{ color: "red", marginTop: 12 }}>{error}</Text> : null}
     </View>
   )
 }
