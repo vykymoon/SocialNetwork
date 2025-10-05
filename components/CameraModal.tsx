@@ -52,14 +52,9 @@ export default function CameraModal({
     setFacing((current) => (current === "back" ? "front" : "back"));
   };
 
-  // ✅ Corregido: conversión de blob -> arrayBuffer con FileReader
   const uploadImageToSupabase = async (uri: string) => {
     try {
       setUploading(true);
-
-      if (!uri || typeof uri !== "string") {
-        throw new Error("URI de archivo inválida");
-      }
 
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -75,7 +70,7 @@ export default function CameraModal({
       const randomId = Math.random().toString(36).substring(2, 15);
       const fileName = `${userId || "user"}_${timestamp}_${randomId}.jpg`;
 
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, arrayBuffer, {
           cacheControl: "3600",
@@ -83,16 +78,15 @@ export default function CameraModal({
           contentType: "image/jpeg",
         });
 
-      if (error) {
-        console.error("Error en upload:", error);
-        throw error;
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+      if (!data || !data.publicUrl) {
+        throw new Error("No se pudo obtener la URL pública del archivo.");
       }
 
-      const { data: {publicUrl} } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
-
-      return publicUrl;
+      return data.publicUrl;
     } catch (err) {
       console.error("Error subiendo imagen:", err);
       Alert.alert("Error", "No se pudo subir la imagen. Intenta de nuevo.");
@@ -114,7 +108,6 @@ export default function CameraModal({
         setPhoto(photoData.uri);
 
         const publicUrl = await uploadImageToSupabase(photoData.uri);
-
         if (publicUrl && onImagePicked) {
           onImagePicked(publicUrl);
           onClose();
@@ -144,7 +137,6 @@ export default function CameraModal({
         setPhoto(uri);
 
         const publicUrl = await uploadImageToSupabase(uri);
-
         if (publicUrl && onImagePicked) {
           onImagePicked(publicUrl);
           onClose();
@@ -217,16 +209,6 @@ export default function CameraModal({
       </View>
     </Modal>
   );
-}
-
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
 
 const styles = StyleSheet.create({
